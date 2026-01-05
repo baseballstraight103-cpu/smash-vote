@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>スマブラキャラ投票</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    #ranking-container {
+      max-height: 500px;
+      overflow-y: auto;
+      margin: 20px auto;
+      width: 90%;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>スマブラキャラ投票</h1>
+
+  <!-- 投票画面 -->
+  <div>
+    <h2 id="charA"></h2>
+    <button onclick="vote('A')">投票</button>
+    <h2 id="charB"></h2>
+    <button onclick="vote('B')">投票</button>
+  </div>
+
+  <!-- ランキング表示 -->
+  <h2>ランキング</h2>
+  <div id="ranking-container">
+    <table id="ranking">
+      <thead>
+        <tr><th>キャラ</th><th>勝ち数</th><th>試合数</th><th>勝率</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Firebase SDK (CDN版) -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+  <script>
+    // Firebase設定（直樹さんのプロジェクト用）
+    const firebaseConfig = {
+      apiKey: "AIzaSyC_zETBlV96I3QmqRYUJih514kAKEVLxdc",
+      authDomain: "smash-vote.firebaseapp.com",
+      databaseURL: "https://smash-vote-default-rtdb.firebaseio.com", // ←今回のURL
+      projectId: "smash-vote",
+      storageBucket: "smash-vote.firebasestorage.app",
+      messagingSenderId: "247917547200",
+      appId: "1:247917547200:web:caa0eaf0bbb53413c4a725",
+      measurementId: "G-DBC4GSYBXB"
+    };
+
+    // 初期化
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // キャラ一覧（90キャラ）
+    let characters = [
+      "マリオ","ドンキーコング","リンク","サムス","ダークサムス","ヨッシー","カービィ","フォックス","ピカチュウ","ルイージ",
+      "ネス","キャプテン・ファルコン","プリン","ピーチ/デイジー","クッパ","アイスクライマー","シーク","ゼルダ","ドクターマリオ",
+      "ピチュー","ファルコ","マルス","ルキナ","こどもリンク","ガノンドロフ","ミュウツー","ロイ","クロム","Mr.ゲーム&ウォッチ",
+      "メタナイト","ピット","ブラックピット","ゼロスーツサムス","ワリオ","スネーク","アイク","ポケモントレーナー","ゼニガメ","フシギソウ",
+      "リザードン","ディディーコング","リュカ","ソニック","デデデ","ピクミン&オリマー","ルカリオ","ロボット","トゥーンリンク","ウルフ",
+      "むらびと","ロックマン","Wii Fit トレーナー","ロゼッタ&チコ","リトル・マック","ゲッコウガ","Mii 格闘タイプ","Mii 剣術タイプ","Mii 射撃タイプ","パルテナ",
+      "パックマン","ルフレ","シュルク","クッパJr.","ダックハント","リュウ","ケン","クラウド","カムイ","ベヨネッタ",
+      "インクリング","リドリー","シモン/リヒター","キングクルール","しずえ","ガオガエン","パックンフラワー","ジョーカー","勇者",
+      "バンジョー&カズーイ","テリー","ベレト/ベレス","ミェンミェン","スティーブ","セフィロス","ホムラ/ヒカリ","カズヤ","ソラ"
+    ];
+
+    let currentA, currentB;
+
+    function pickCharacters() {
+      let shuffled = characters.slice().sort(() => 0.5 - Math.random()); // コピーしてシャッフル
+      currentA = shuffled[0];
+      currentB = shuffled[1];
+      document.getElementById("charA").textContent = currentA;
+      document.getElementById("charB").textContent = currentB;
+    }
+
+    function vote(choice) {
+      let winner = (choice === "A") ? currentA : currentB;
+      let loser = (choice === "A") ? currentB : currentA;
+
+      // Firebaseに保存
+      db.ref("votes/" + winner + "/wins").transaction(val => (val || 0) + 1);
+      db.ref("votes/" + currentA + "/matches").transaction(val => (val || 0) + 1);
+      db.ref("votes/" + currentB + "/matches").transaction(val => (val || 0) + 1);
+
+      // 履歴も保存
+      let timestamp = new Date().toLocaleTimeString();
+      db.ref("history").push({ time: timestamp, winner, loser });
+
+      pickCharacters();
+    }
+
+    // ランキングをリアルタイム更新
+    db.ref("votes").on("value", snapshot => {
+      let data = snapshot.val() || {};
+      let ranking = characters.map(name => {
+        let stats = data[name] || {};
+        let wins = stats.wins || 0;
+        let matches = stats.matches || 0;
+        let winRate = matches > 0 ? (wins / matches * 100).toFixed(1) : 0;
+        return { name, wins, matches, winRate };
+      });
+
+      ranking.sort((a, b) => b.winRate - a.winRate);
+
+      let tbody = document.querySelector("#ranking tbody");
+      tbody.innerHTML = "";
+      ranking.forEach(char => {
+        let row = `<tr>
+          <td>${char.name}</td>
+          <td>${char.wins}</td>
+          <td>${char.matches}</td>
+          <td>${char.winRate}%</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    });
+
+    pickCharacters();
+  </script>
+</body>
+</html>
