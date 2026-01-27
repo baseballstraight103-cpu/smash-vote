@@ -47,6 +47,9 @@
     </table>
   </div>
 
+  <!-- ★ 一時的に置く修正ボタン（修正後は削除OK） -->
+  <!-- <button onclick="fullFixData()">データ完全修正を実行</button> -->
+
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -67,35 +70,38 @@
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Firebase禁止文字を安全なキーに変換
+    function safeKey(name) {
+      return name.replace(/[.#$/[\]]/g, "_");
+    }
+
     // キャラ一覧
     let characters = [
       "マリオ","ドンキーコング","リンク","サムス","ダークサムス","ヨッシー","カービィ","フォックス","ピカチュウ","ルイージ",
-      "ネス","キャプテン・ファルコン","プリン","ピーチデイジー","クッパ","アイスクライマー","シーク","ゼルダ","ドクターマリオ",
-      "ピチュー","ファルコ","マルス","ルキナ","こどもリンク","ガノンドロフ","ミュウツー","ロイ","クロム","Mrゲーム&ウォッチ",
+      "ネス","キャプテン・ファルコン","プリン","ピーチ/デイジー","クッパ","アイスクライマー","シーク","ゼルダ","ドクターマリオ",
+      "ピチュー","ファルコ","マルス","ルキナ","こどもリンク","ガノンドロフ","ミュウツー","ロイ","クロム","Mr.ゲーム&ウォッチ",
       "メタナイト","ピット","ブラックピット","ゼロスーツサムス","ワリオ","スネーク","アイク","ポケモントレーナー","ディディーコング","リュカ",
       "ソニック","デデデ","ピクミン&オリマー","ルカリオ","ロボット","トゥーンリンク","ウルフ","むらびと","ロックマン","Wii Fit トレーナー",
       "ロゼッタ&チコ","リトル・マック","ゲッコウガ","Mii 格闘タイプ","Mii 剣術タイプ","Mii 射撃タイプ","パルテナ","パックマン","ルフレ","シュルク",
-      "クッパJr","ダックハント","リュウ","ケン","クラウド","カムイ","ベヨネッタ","インクリング","リドリー","シモンリヒター",
-      "キングクルール","しずえ","ガオガエン","パックンフラワー","ジョーカー","勇者","バンジョー&カズーイ","テリー","ベレトベレス","ミェンミェン",
-      "スティーブ","セフィロス","ホムラヒカリ","カズヤ","ソラ"
+      "クッパJr.","ダックハント","リュウ","ケン","クラウド","カムイ","ベヨネッタ","インクリング","リドリー","シモン/リヒター",
+      "キングクルール","しずえ","ガオガエン","パックンフラワー","ジョーカー","勇者","バンジョー&カズーイ","テリー","ベレト/ベレス","ミェンミェン",
+      "スティーブ","セフィロス","ホムラ/ヒカリ","カズヤ","ソラ"
     ];
 
     let previousRanks = {};
     let currentA, currentB;
 
-    // ★ 試合数が少ないキャラを優先して選ぶ（簡易均等抽選）
+    // ★ 試合数が少ないキャラを優先して選ぶ（均等抽選）
     function pickCharacters() {
       db.ref("votes").once("value").then(snapshot => {
         let data = snapshot.val() || {};
 
-        // 試合数が少ない順に並べる
         let sorted = characters.slice().sort((a, b) => {
-          let ma = (data[a]?.matches) || 0;
-          let mb = (data[b]?.matches) || 0;
+          let ma = (data[safeKey(a)]?.matches) || 0;
+          let mb = (data[safeKey(b)]?.matches) || 0;
           return ma - mb;
         });
 
-        // 試合数が少ない上位20キャラからランダムに2つ
         let pool = sorted.slice(0, 20);
         let shuffled = pool.sort(() => 0.5 - Math.random());
 
@@ -107,36 +113,39 @@
       });
     }
 
-    // ★ wins と matches を1つの transaction で更新（勝率100%超え防止）
-function vote(choice) {
-  let winner = (choice === "A") ? currentA : currentB;
-  let loser = (choice === "A") ? currentB : currentA;
+    // ★ wins と matches を1つの transaction で更新
+    function vote(choice) {
+      let winner = (choice === "A") ? currentA : currentB;
+      let loser = (choice === "A") ? currentB : currentA;
 
-  db.ref("votes").transaction(votes => {
-    let newVotes = votes || {};
+      let wKey = safeKey(winner);
+      let lKey = safeKey(loser);
 
-    if (!newVotes[winner]) newVotes[winner] = { wins: 0, matches: 0 };
-    if (!newVotes[loser]) newVotes[loser] = { wins: 0, matches: 0 };
+      db.ref("votes").transaction(votes => {
+        let newVotes = votes || {};
 
-    newVotes[winner].wins += 1;
-    newVotes[winner].matches += 1;
-    newVotes[loser].matches += 1;
+        if (!newVotes[wKey]) newVotes[wKey] = { wins: 0, matches: 0 };
+        if (!newVotes[lKey]) newVotes[lKey] = { wins: 0, matches: 0 };
 
-    return newVotes; // ← これが超重要
-  });
+        newVotes[wKey].wins += 1;
+        newVotes[wKey].matches += 1;
+        newVotes[lKey].matches += 1;
 
-  let timestamp = new Date().toLocaleTimeString();
-  db.ref("history").push({ time: timestamp, winner, loser });
+        return newVotes;
+      });
 
-  pickCharacters();
-}
+      let timestamp = new Date().toLocaleTimeString();
+      db.ref("history").push({ time: timestamp, winner, loser });
+
+      pickCharacters();
+    }
 
     // ランキング更新
     db.ref("votes").on("value", snapshot => {
       let data = snapshot.val() || {};
 
       let ranking = characters.map(name => {
-        let stats = data[name] || {};
+        let stats = data[safeKey(name)] || {};
         let wins = stats.wins || 0;
         let matches = stats.matches || 0;
         let winRate = matches > 0 ? (wins / matches * 100).toFixed(1) : 0;
@@ -151,7 +160,6 @@ function vote(choice) {
       ranking.forEach((char, index) => {
         let rank = index + 1;
 
-        // 前回比（色つき矢印）
         let arrow = `<span style="color: gray;">→</span>`;
         if (previousRanks[char.name] !== undefined) {
           if (previousRanks[char.name] > rank) arrow = `<span style="color: red;">↑</span>`;
@@ -174,37 +182,39 @@ function vote(choice) {
       });
     });
 
+    // ★ 古いキーの移行 + 不整合修正（完全修復）
+    function fullFixData() {
+      db.ref("votes").once("value").then(snapshot => {
+        let data = snapshot.val() || {};
+        let updates = {};
+        let deletes = {};
+
+        characters.forEach(name => {
+          let oldKey = name;
+          let newKey = safeKey(name);
+
+          let stats = data[oldKey] || data[newKey] || {};
+          let wins = stats.wins || 0;
+          let matches = stats.matches || 0;
+
+          if (wins > matches) matches = wins;
+
+          updates[newKey] = { wins, matches };
+
+          if (data[oldKey] && oldKey !== newKey) {
+            deletes[oldKey] = null;
+          }
+        });
+
+        db.ref("votes").update(updates).then(() => {
+          db.ref("votes").update(deletes).then(() => {
+            alert("データ完全修正が完了しました！");
+          });
+        });
+      });
+    }
+
     pickCharacters();
-
-function fixData() {
-  db.ref("votes").once("value").then(snapshot => {
-    let data = snapshot.val() || {};
-    let updates = {};
-
-    characters.forEach(name => {
-      let key = safeKey(name);
-      let stats = data[key] || {};
-      let wins = stats.wins || 0;
-      let matches = stats.matches || 0;
-
-      // 不整合修正
-      if (wins > matches) {
-        console.log(`修正: ${name} wins=${wins} matches=${matches} → matches=${wins}`);
-        matches = wins;
-      }
-
-      updates[key] = { wins, matches };
-    });
-
-    db.ref("votes").update(updates).then(() => {
-      alert("データ修正が完了しました！");
-    });
-  });
-}
-
   </script>
-
-<button onclick="fixData()">データ修正を実行</button>
-
 </body>
 </html>
