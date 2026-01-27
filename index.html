@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta name="google-site-verification" content="5WHSWDMsqcnR1P4bjuxcISh62-LsXXAV4TQzfQdPemg" />
   <meta charset="UTF-8">
   <title>スマブラSP2択キャラランク</title>
-   <meta name="description" content="スマブラキャラを2択で投票してランキングを作るサイト。リアルタイムで勝率ランキングを確認できます。">
+  <meta name="description" content="スマブラキャラを2択で投票してランキングを作るサイト。リアルタイムで勝率ランキングを確認できます。">
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
     button { padding: 10px 20px; margin: 10px; font-size: 16px; }
@@ -34,30 +33,30 @@
   <h2>ランキング</h2>
   <div id="ranking-container">
     <table id="ranking">
-     <thead>
-  <tr>
-    <th>順位</th>
-    <th>キャラ</th>
-    <th>勝ち数</th>
-    <th>試合数</th>
-    <th>勝率</th>
-    <th>前回比</th>
-  </tr>
-</thead>
+      <thead>
+        <tr>
+          <th>順位</th>
+          <th>キャラ</th>
+          <th>勝ち数</th>
+          <th>試合数</th>
+          <th>勝率</th>
+          <th>前回比</th>
+        </tr>
+      </thead>
       <tbody></tbody>
     </table>
   </div>
 
-  <!-- Firebase  (CDN版) -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
   <script>
-    // Firebase設定（プロジェクト用）
+    // Firebase設定
     const firebaseConfig = {
       apiKey: "AIzaSyC_zETBlV96I3QmqRYUJih514kAKEVLxdc",
       authDomain: "smash-vote.firebaseapp.com",
-      databaseURL: "https://smash-vote-default-rtdb.firebaseio.com", // ←今回のURL
+      databaseURL: "https://smash-vote-default-rtdb.firebaseio.com",
       projectId: "smash-vote",
       storageBucket: "smash-vote.firebasestorage.app",
       messagingSenderId: "247917547200",
@@ -65,105 +64,147 @@
       measurementId: "G-DBC4GSYBXB"
     };
 
-    // 初期化
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // キャラ一覧（90キャラ?）
+    // キャラ一覧
     let characters = [
       "マリオ","ドンキーコング","リンク","サムス","ダークサムス","ヨッシー","カービィ","フォックス","ピカチュウ","ルイージ",
-      "ネス","キャプテン・ファルコン","プリン","ピーチ/デイジー","クッパ","アイスクライマー","シーク","ゼルダ","ドクターマリオ",
-      "ピチュー","ファルコ","マルス","ルキナ","こどもリンク","ガノンドロフ","ミュウツー","ロイ","クロム","Mr.ゲーム&ウォッチ",
-      "メタナイト","ピット","ブラックピット","ゼロスーツサムス","ワリオ","スネーク","アイク","ポケモントレーナー","ディディーコング","リュカ","ソニック","デデデ","ピクミン&オリマー","ルカリオ","ロボット","トゥーンリンク","ウルフ",
-      "むらびと","ロックマン","Wii Fit トレーナー","ロゼッタ&チコ","リトル・マック","ゲッコウガ","Mii 格闘タイプ","Mii 剣術タイプ","Mii 射撃タイプ","パルテナ",
-      "パックマン","ルフレ","シュルク","クッパJr.","ダックハント","リュウ","ケン","クラウド","カムイ","ベヨネッタ",
-      "インクリング","リドリー","シモン/リヒター","キングクルール","しずえ","ガオガエン","パックンフラワー","ジョーカー","勇者",
-      "バンジョー&カズーイ","テリー","ベレト/ベレス","ミェンミェン","スティーブ","セフィロス","ホムラ/ヒカリ","カズヤ","ソラ"
+      "ネス","キャプテン・ファルコン","プリン","ピーチデイジー","クッパ","アイスクライマー","シーク","ゼルダ","ドクターマリオ",
+      "ピチュー","ファルコ","マルス","ルキナ","こどもリンク","ガノンドロフ","ミュウツー","ロイ","クロム","Mrゲーム&ウォッチ",
+      "メタナイト","ピット","ブラックピット","ゼロスーツサムス","ワリオ","スネーク","アイク","ポケモントレーナー","ディディーコング","リュカ",
+      "ソニック","デデデ","ピクミン&オリマー","ルカリオ","ロボット","トゥーンリンク","ウルフ","むらびと","ロックマン","Wii Fit トレーナー",
+      "ロゼッタ&チコ","リトル・マック","ゲッコウガ","Mii 格闘タイプ","Mii 剣術タイプ","Mii 射撃タイプ","パルテナ","パックマン","ルフレ","シュルク",
+      "クッパJr","ダックハント","リュウ","ケン","クラウド","カムイ","ベヨネッタ","インクリング","リドリー","シモンリヒター",
+      "キングクルール","しずえ","ガオガエン","パックンフラワー","ジョーカー","勇者","バンジョー&カズーイ","テリー","ベレトベレス","ミェンミェン",
+      "スティーブ","セフィロス","ホムラヒカリ","カズヤ","ソラ"
     ];
 
     let previousRanks = {};
-    
     let currentA, currentB;
 
+    // ★ 試合数が少ないキャラを優先して選ぶ（簡易均等抽選）
     function pickCharacters() {
-      let shuffled = characters.slice().sort(() => 0.5 - Math.random()); // コピーしてシャッフル
-      currentA = shuffled[0];
-      currentB = shuffled[1];
-      document.getElementById("charA").textContent = currentA;
-      document.getElementById("charB").textContent = currentB;
+      db.ref("votes").once("value").then(snapshot => {
+        let data = snapshot.val() || {};
+
+        // 試合数が少ない順に並べる
+        let sorted = characters.slice().sort((a, b) => {
+          let ma = (data[a]?.matches) || 0;
+          let mb = (data[b]?.matches) || 0;
+          return ma - mb;
+        });
+
+        // 試合数が少ない上位20キャラからランダムに2つ
+        let pool = sorted.slice(0, 20);
+        let shuffled = pool.sort(() => 0.5 - Math.random());
+
+        currentA = shuffled[0];
+        currentB = shuffled[1];
+
+        document.getElementById("charA").textContent = currentA;
+        document.getElementById("charB").textContent = currentB;
+      });
     }
 
-    function vote(choice) {
-      let winner = (choice === "A") ? currentA : currentB;
-      let loser = (choice === "A") ? currentB : currentA;
+    // ★ wins と matches を1つの transaction で更新（勝率100%超え防止）
+function vote(choice) {
+  let winner = (choice === "A") ? currentA : currentB;
+  let loser = (choice === "A") ? currentB : currentA;
 
-      // Firebaseに保存
-      db.ref("votes/" + winner + "/wins").transaction(val => (val || 0) + 1);
-      db.ref("votes/" + currentA + "/matches").transaction(val => (val || 0) + 1);
-      db.ref("votes/" + currentB + "/matches").transaction(val => (val || 0) + 1);
+  db.ref("votes").transaction(votes => {
+    let newVotes = votes || {};
 
-      // 履歴も保存
-      let timestamp = new Date().toLocaleTimeString();
-      db.ref("history").push({ time: timestamp, winner, loser });
+    if (!newVotes[winner]) newVotes[winner] = { wins: 0, matches: 0 };
+    if (!newVotes[loser]) newVotes[loser] = { wins: 0, matches: 0 };
 
-      pickCharacters();
-    }
+    newVotes[winner].wins += 1;
+    newVotes[winner].matches += 1;
+    newVotes[loser].matches += 1;
 
-    // ランキングをリアルタイム更新
-  db.ref("votes").on("value", snapshot => {
-  let data = snapshot.val() || {};
-
-  let ranking = characters.map(name => {
-    let stats = data[name] || {};
-    let wins = stats.wins || 0;
-    let matches = stats.matches || 0;
-    let winRate = matches > 0 ? (wins / matches * 100).toFixed(1) : 0;
-    return { name, wins, matches, winRate };
+    return newVotes; // ← これが超重要
   });
 
-  ranking.sort((a, b) => b.winRate - a.winRate);
+  let timestamp = new Date().toLocaleTimeString();
+  db.ref("history").push({ time: timestamp, winner, loser });
 
-  let tbody = document.querySelector("#ranking tbody");
-  tbody.innerHTML = "";
+  pickCharacters();
+}
 
-ranking.forEach((char, index) => {
-  let rank = index + 1;
+    // ランキング更新
+    db.ref("votes").on("value", snapshot => {
+      let data = snapshot.val() || {};
 
-  // 前回比の矢印を決定（色つき）
-  let arrow = `<span style="color: gray;">→</span>`; // デフォルト（変動なし）
+      let ranking = characters.map(name => {
+        let stats = data[name] || {};
+        let wins = stats.wins || 0;
+        let matches = stats.matches || 0;
+        let winRate = matches > 0 ? (wins / matches * 100).toFixed(1) : 0;
+        return { name, wins, matches, winRate };
+      });
 
-  if (previousRanks[char.name] !== undefined) {
-    if (previousRanks[char.name] > rank) {
-      arrow = `<span style="color: red;">↑</span>`;   // 順位アップ
-    } else if (previousRanks[char.name] < rank) {
-      arrow = `<span style="color: blue;">↓</span>`;  // 順位ダウン
-    }
-  }
+      ranking.sort((a, b) => b.winRate - a.winRate);
 
-  // 表に追加
-  let row = `
-    <tr>
-      <td>${rank}</td>
-      <td>${char.name}</td>
-      <td>${char.wins}</td>
-      <td>${char.matches}</td>
-      <td>${char.winRate}%</td>
-      <td>${arrow}</td>
-    </tr>
-  `;
-  tbody.innerHTML += row;
+      let tbody = document.querySelector("#ranking tbody");
+      tbody.innerHTML = "";
 
-  // 今回の順位を保存
-  previousRanks[char.name] = rank;
-});
-});
+      ranking.forEach((char, index) => {
+        let rank = index + 1;
+
+        // 前回比（色つき矢印）
+        let arrow = `<span style="color: gray;">→</span>`;
+        if (previousRanks[char.name] !== undefined) {
+          if (previousRanks[char.name] > rank) arrow = `<span style="color: red;">↑</span>`;
+          else if (previousRanks[char.name] < rank) arrow = `<span style="color: blue;">↓</span>`;
+        }
+
+        let row = `
+          <tr>
+            <td>${rank}</td>
+            <td>${char.name}</td>
+            <td>${char.wins}</td>
+            <td>${char.matches}</td>
+            <td>${char.winRate}%</td>
+            <td>${arrow}</td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+
+        previousRanks[char.name] = rank;
+      });
+    });
 
     pickCharacters();
+
+function fixData() {
+  db.ref("votes").once("value").then(snapshot => {
+    let data = snapshot.val() || {};
+    let updates = {};
+
+    characters.forEach(name => {
+      let key = safeKey(name);
+      let stats = data[key] || {};
+      let wins = stats.wins || 0;
+      let matches = stats.matches || 0;
+
+      // 不整合修正
+      if (wins > matches) {
+        console.log(`修正: ${name} wins=${wins} matches=${matches} → matches=${wins}`);
+        matches = wins;
+      }
+
+      updates[key] = { wins, matches };
+    });
+
+    db.ref("votes").update(updates).then(() => {
+      alert("データ修正が完了しました！");
+    });
+  });
+}
+
   </script>
+
+<button onclick="fixData()">データ修正を実行</button>
+
 </body>
-
 </html>
-
-
-
-
